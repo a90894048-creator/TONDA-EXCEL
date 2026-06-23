@@ -87,15 +87,23 @@
     .table-note { font-size: 11px; color: #aaa; margin-top: 6px; }
     .empty-msg { text-align: center; padding: 2.5rem; color: #aaa; font-size: 13px; }
 
-    /* DB 바 */
-    .db-bar { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 9px 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .db-bar-label { font-size: 12px; font-weight: 600; color: #888; white-space: nowrap; }
-    .db-bar-status { font-size: 12px; color: #aaa; flex: 1; }
-    .db-bar-status.ok { color: #2e7d32; }
-    .db-dropzone-btn { position: relative; border: 1px dashed #ccc; border-radius: 6px; padding: 4px 12px; font-size: 12px; color: #666; cursor: pointer; background: #fafafa; white-space: nowrap; transition: background 0.12s; }
-    .db-dropzone-btn:hover { background: #f0f4ff; border-color: #1a6cf5; color: #1a6cf5; }
-    .db-dropzone-btn input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-    .db-remove-btn { background: none; border: none; cursor: pointer; color: #bbb; font-size: 13px; padding: 0; }
+    /* DB 섹션 */
+    .db-section { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1rem 1.25rem; }
+    .db-section-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .icon-db { background: #e8f0fe; width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+    .db-title { font-size: 13px; font-weight: 600; color: #555; }
+    .db-hint  { font-size: 11px; color: #aaa; margin-left: auto; }
+    .db-dropzone { border: 1.5px dashed #ccc; border-radius: 8px; padding: 16px; text-align: center; cursor: pointer; background: #fafafa; position: relative; transition: background 0.15s, border-color 0.15s; display: flex; align-items: center; gap: 12px; justify-content: center; }
+    .db-dropzone:hover, .db-dropzone.drag-over { background: #f0f4ff; border-color: #1a6cf5; }
+    .db-dropzone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .db-dz-icon { font-size: 22px; }
+    .db-dz-text { font-size: 13px; color: #666; }
+    .db-dz-hint { font-size: 11px; color: #aaa; }
+    .db-file-status { margin-top: 8px; border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; gap: 8px; font-size: 12px; background: #f4f5f7; }
+    .db-file-status.ok { background: #e8f5e9; }
+    .db-file-status.ok .db-fs-name { color: #2e7d32; font-weight: 500; }
+    .db-fs-info { color: #888; }
+    .db-remove-btn { margin-left: auto; background: none; border: none; cursor: pointer; color: #aaa; font-size: 14px; padding: 0 2px; }
     .db-remove-btn:hover { color: #e53935; }
 
     #lib-status { font-size: 11px; padding: 4px 10px; border-radius: 6px; }
@@ -171,15 +179,24 @@
     <p class="table-note" id="table-note" style="display:none"></p>
   </div>
 
-  <!-- DB 파일 (하단 작게) -->
-  <div class="db-bar">
-    <div class="db-bar-label">🗄️ DB 파일</div>
-    <div class="db-bar-status" id="db-status">업로드되지 않았습니다</div>
-    <div class="db-dropzone-btn" id="db-drop">
-      📁 업로드 / 교체
-      <input type="file" accept=".xlsx,.xls" id="db-file-input" />
+  <!-- DB 파일 (하단) -->
+  <div class="db-section">
+    <div class="db-section-header">
+      <div class="icon-db">🗄️</div>
+      <span class="db-title">DB 파일</span>
+      <span class="db-hint">주기적으로 교체하는 마스터 데이터 — 한 번 올리면 브라우저에 저장됩니다</span>
     </div>
-    <button class="db-remove-btn" id="db-remove-btn" style="display:none">✕</button>
+    <div class="db-dropzone" id="db-drop">
+      <input type="file" accept=".xlsx,.xls" id="db-file-input" />
+      <div class="db-dz-icon">🗄️</div>
+      <div>
+        <div class="db-dz-text">클릭하거나 파일을 끌어다 놓으세요</div>
+        <div class="db-dz-hint">.xlsx / .xls</div>
+      </div>
+    </div>
+    <div class="db-file-status" id="db-status">
+      <span>⚪</span><span class="db-fs-info">DB 파일이 업로드되지 않았습니다</span>
+    </div>
   </div>
 
 </div>
@@ -281,10 +298,7 @@ async function loadDB(file) {
     } catch(e) {}
 
     const now = new Date().toLocaleDateString('ko-KR');
-    const st = document.getElementById('db-status');
-    st.className = 'db-bar-status ok';
-    st.textContent = `${file.name}  ·  ${state.dbRows.length.toLocaleString()}행  ·  ${now}`;
-    document.getElementById('db-remove-btn').style.display = 'inline';
+    setDbStatus(true, file.name, `${state.dbRows.length.toLocaleString()}행 · ${now}`);
   } catch(e) { alert('DB 파일 읽기 실패:\n' + e.message); }
   updateRunBtn();
 }
@@ -305,13 +319,22 @@ async function loadInput(file) {
   updateRunBtn();
 }
 
+function setDbStatus(ok, name, info) {
+  const el = document.getElementById('db-status');
+  el.className = 'db-file-status' + (ok ? ' ok' : '');
+  el.innerHTML = ok
+    ? `<span>✅</span><span class="db-fs-name">${name}</span><span class="db-fs-info">${info}</span>
+       <button class="db-remove-btn" id="db-remove-btn-inner">✕</button>`
+    : `<span>⚪</span><span class="db-fs-info">DB 파일이 업로드되지 않았습니다</span>`;
+  if (ok) {
+    document.getElementById('db-remove-btn-inner').addEventListener('click', clearDB);
+  }
+}
+
 function clearDB() {
   state.dbRows = []; state.dbByTaxNo = {}; state.dbFileName = '';
   try { localStorage.removeItem('db_file_name'); localStorage.removeItem('db_file_data'); } catch(e) {}
-  const st = document.getElementById('db-status');
-  st.className = 'db-bar-status';
-  st.textContent = '업로드되지 않았습니다';
-  document.getElementById('db-remove-btn').style.display = 'none';
+  setDbStatus(false);
   document.getElementById('db-file-input').value = '';
   updateRunBtn();
 }
@@ -339,7 +362,6 @@ function setupDrop(dropId, inputId, loader) {
 }
 setupDrop('input-drop', 'input-file-input', loadInput);
 setupDrop('db-drop',    'db-file-input',    loadDB);
-document.getElementById('db-remove-btn').addEventListener('click', clearDB);
 
 // localStorage 복원
 try {
@@ -350,10 +372,7 @@ try {
     const wb = XS.read(data, { type: 'base64' });
     state.dbFileName = name;
     buildDbIndex(sheetToJson(wb));
-    const st = document.getElementById('db-status');
-    st.className = 'db-bar-status ok';
-    st.textContent = `${name}  ·  ${state.dbRows.length.toLocaleString()}행  ·  이전 세션에서 복원`;
-    document.getElementById('db-remove-btn').style.display = 'inline';
+    setDbStatus(true, name, `${state.dbRows.length.toLocaleString()}행 · 이전 세션에서 복원`);
     updateRunBtn();
   }
 } catch(e) { console.warn('DB 복원 실패:', e); }
