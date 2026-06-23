@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TONDA 엑셀 변환기</title>
-  <!-- xlsx-js-style: 읽기 + 쓰기(스타일) 모두 지원 (로컬) -->
   <script src="xlsx.bundle.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -13,19 +12,24 @@
     header { background: #fff; border-bottom: 1px solid #e0e0e0; padding: 0 2rem; height: 52px; display: flex; align-items: center; gap: 10px; }
     .logo { font-size: 16px; font-weight: 600; }
     .badge { font-size: 11px; background: #e8f0fe; color: #1a6cf5; padding: 2px 8px; border-radius: 20px; }
+    #lib-status { font-size: 11px; padding: 3px 10px; border-radius: 6px; margin-left: auto; }
+    .lib-ok   { background: #e8f5e9; color: #2e7d32; }
+    .lib-fail { background: #fce4ec; color: #c62828; }
 
     .container { max-width: 980px; margin: 0 auto; padding: 1.5rem 1.5rem 2rem; display: flex; flex-direction: column; gap: 1rem; }
 
     .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1.25rem; }
     .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
     .card-icon { width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
-    .icon-in { background: #fff3e0; }
+    .icon-in  { background: #fff3e0; }
     .icon-out { background: #e8f5e9; }
+    .icon-db  { background: #e8f0fe; }
     .card-title { font-size: 15px; font-weight: 600; }
     .card-sub { font-size: 12px; color: #888; margin-bottom: 1rem; }
     .pill { margin-left: auto; font-size: 11px; padding: 2px 10px; border-radius: 20px; }
     .pill-orange { background: #fff3e0; color: #e65100; }
     .pill-green  { background: #e8f5e9; color: #2e7d32; }
+    .pill-blue   { background: #e8f0fe; color: #1a6cf5; }
 
     .dropzone { border: 1.5px dashed #ccc; border-radius: 8px; padding: 36px 16px; text-align: center; cursor: pointer; background: #fafafa; position: relative; transition: background 0.15s, border-color 0.15s; }
     .dropzone:hover, .dropzone.drag-over { background: #f0f4ff; border-color: #1a6cf5; }
@@ -33,6 +37,14 @@
     .dz-icon { font-size: 36px; margin-bottom: 8px; }
     .dz-text { font-size: 14px; color: #555; }
     .dz-hint { font-size: 11px; color: #aaa; margin-top: 3px; }
+
+    /* DB 드롭존 (작게) */
+    .db-dropzone { border: 1.5px dashed #ccc; border-radius: 8px; padding: 18px 16px; text-align: center; cursor: pointer; background: #fafafa; position: relative; transition: background 0.15s, border-color 0.15s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .db-dropzone:hover, .db-dropzone.drag-over { background: #f0f4ff; border-color: #1a6cf5; }
+    .db-dropzone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .db-dz-icon { font-size: 22px; }
+    .db-dz-text { font-size: 13px; color: #666; }
+    .db-dz-hint { font-size: 11px; color: #aaa; }
 
     .file-status { margin-top: 10px; border-radius: 8px; padding: 9px 12px; display: flex; align-items: center; gap: 8px; font-size: 12px; background: #f4f5f7; }
     .fs-name { font-weight: 500; }
@@ -80,43 +92,42 @@
     th { padding: 8px 10px; text-align: left; font-weight: 500; color: #555; border-bottom: 1px solid #e0e0e0; white-space: nowrap; }
     td { padding: 6px 10px; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
     tr:last-child td { border-bottom: none; }
-    td.from-db   { color: #2e7d32; }
-    td.miss-hs   { background: #fffde7; color: #e65100; font-weight: 500; }
-    td.miss-tax  { background: #fff3e0; color: #e65100; }
+    td.from-db  { color: #2e7d32; }
+    td.miss-hs  { background: #fffde7; color: #e65100; font-weight: 500; }
+    td.miss-tax { background: #fff3e0; color: #e65100; }
 
     .table-note { font-size: 11px; color: #aaa; margin-top: 6px; }
-    .empty-msg { text-align: center; padding: 2.5rem; color: #aaa; font-size: 13px; }
+    .empty-msg  { text-align: center; padding: 2.5rem; color: #aaa; font-size: 13px; }
 
-    /* DB 섹션 */
-    .db-section { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1rem 1.25rem; }
-    .db-section-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-    .icon-db { background: #e8f0fe; width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
-    .db-title { font-size: 13px; font-weight: 600; color: #555; }
-    .db-hint  { font-size: 11px; color: #aaa; margin-left: auto; }
-    .db-dropzone { border: 1.5px dashed #ccc; border-radius: 8px; padding: 16px; text-align: center; cursor: pointer; background: #fafafa; position: relative; transition: background 0.15s, border-color 0.15s; display: flex; align-items: center; gap: 12px; justify-content: center; }
-    .db-dropzone:hover, .db-dropzone.drag-over { background: #f0f4ff; border-color: #1a6cf5; }
-    .db-dropzone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-    .db-dz-icon { font-size: 22px; }
-    .db-dz-text { font-size: 13px; color: #666; }
-    .db-dz-hint { font-size: 11px; color: #aaa; }
-    .db-file-status { margin-top: 8px; border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; gap: 8px; font-size: 12px; background: #f4f5f7; }
-    .db-file-status.ok { background: #e8f5e9; }
-    .db-file-status.ok .db-fs-name { color: #2e7d32; font-weight: 500; }
-    .db-fs-info { color: #888; }
-    .db-remove-btn { margin-left: auto; background: none; border: none; cursor: pointer; color: #aaa; font-size: 14px; padding: 0 2px; }
-    .db-remove-btn:hover { color: #e53935; }
+    /* DB 상태 바 */
+    .db-status-bar { margin-top: 10px; border-radius: 8px; padding: 9px 12px; display: flex; align-items: center; gap: 8px; font-size: 12px; background: #f4f5f7; min-height: 38px; }
+    .db-status-bar.ok      { background: #e8f5e9; }
+    .db-status-bar.loading { background: #e8f0fe; }
+    .db-status-bar.error   { background: #fce4ec; }
+    .db-sname { font-weight: 500; color: #2e7d32; }
+    .db-sinfo { color: #888; flex: 1; }
+    .db-sinfo.err { color: #c62828; }
+    .db-sinfo.loading { color: #1a6cf5; }
 
-    #lib-status { font-size: 11px; padding: 4px 10px; border-radius: 6px; }
-    .lib-ok   { background: #e8f5e9; color: #2e7d32; }
-    .lib-fail { background: #fce4ec; color: #c62828; }
+    /* 토큰 설정 */
+    .token-row { margin-top: 10px; display: flex; align-items: center; gap: 8px; }
+    .token-row input { flex: 1; font-size: 12px; padding: 6px 10px; border: 1px solid #d0d0d0; border-radius: 6px; font-family: monospace; }
+    .token-row input:focus { outline: none; border-color: #1a6cf5; }
+    .token-hint { font-size: 11px; color: #aaa; margin-top: 4px; }
+    .token-hint a { color: #1a6cf5; text-decoration: none; }
+
+    /* 업로드 진행 오버레이 */
+    .upload-progress { display: none; margin-top: 10px; background: #e8f0fe; border-radius: 8px; padding: 9px 12px; font-size: 12px; color: #1a6cf5; align-items: center; gap: 8px; }
+    .spinner { width: 14px; height: 14px; border: 2px solid #b0c8fa; border-top-color: #1a6cf5; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
 
 <header>
   <div class="logo">📊 TONDA 엑셀 변환기</div>
-  <div class="badge">v1.0</div>
-  <div style="margin-left:auto"><span id="lib-status">라이브러리 로딩 중…</span></div>
+  <div class="badge">v1.1</div>
+  <span id="lib-status" style="margin-left:auto; font-size:11px; padding:3px 10px; border-radius:6px;">로딩 중…</span>
 </header>
 
 <div class="container">
@@ -156,7 +167,6 @@
       </div>
       <button class="btn btn-green btn-sm" id="download-btn" disabled>⬇ 다운로드 (.xlsx)</button>
     </div>
-
     <div class="stat-row" id="stat-row" style="display:none">
       <div class="stat-card"><div class="sv sv-total" id="s-total">0</div><div class="sl">전체 입력행</div></div>
       <div class="stat-card"><div class="sv sv-skip"  id="s-skip">0</div><div class="sl">개인통관 제외</div></div>
@@ -164,10 +174,8 @@
       <div class="stat-card"><div class="sv sv-miss"  id="s-miss">0</div><div class="sl">세번 미일치 ⚠</div></div>
       <div class="stat-card"><div class="sv sv-warn"  id="s-warn">0</div><div class="sl">통관번호 미발견</div></div>
     </div>
-
     <div class="section-label" id="log-label" style="display:none">처리 로그</div>
     <div class="log-box" id="log-box" style="display:none"></div>
-
     <div class="section-label" id="preview-label" style="display:none">미리보기 (상위 20행)</div>
     <div class="table-wrap">
       <div class="empty-msg" id="empty-msg">변환 실행 후 결과가 여기에 표시됩니다</div>
@@ -179,86 +187,92 @@
     <p class="table-note" id="table-note" style="display:none"></p>
   </div>
 
-  <!-- DB 파일 (하단) -->
-  <div class="db-section">
-    <div class="db-section-header">
-      <div class="icon-db">🗄️</div>
-      <span class="db-title">DB 파일</span>
-      <span class="db-hint">주기적으로 교체하는 마스터 데이터 — 한 번 올리면 브라우저에 저장됩니다</span>
+  <!-- DB 파일 (공유 연동) -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon icon-db">🗄️</div>
+      <span class="card-title">공유 DB 파일</span>
+      <span class="pill pill-blue" id="db-pill">GitHub 연동</span>
     </div>
+    <p class="card-sub">누구든 업로드하면 GitHub에 저장되어 모든 사용자에게 자동 공유됩니다</p>
+
+    <!-- DB 드롭존 -->
     <div class="db-dropzone" id="db-drop">
       <input type="file" accept=".xlsx,.xls" id="db-file-input" />
       <div class="db-dz-icon">🗄️</div>
       <div>
-        <div class="db-dz-text">클릭하거나 파일을 끌어다 놓으세요</div>
-        <div class="db-dz-hint">.xlsx / .xls</div>
+        <div class="db-dz-text">새 DB 파일 업로드 (클릭 또는 드래그)</div>
+        <div class="db-dz-hint">.xlsx / .xls — GitHub에 저장되어 전체 공유</div>
       </div>
     </div>
-    <div class="db-file-status" id="db-status">
-      <span>⚪</span><span class="db-fs-info">DB 파일이 업로드되지 않았습니다</span>
+
+    <!-- 업로드 진행 표시 -->
+    <div class="upload-progress" id="upload-progress">
+      <div class="spinner"></div>
+      <span id="upload-msg">GitHub에 업로드 중…</span>
+    </div>
+
+    <!-- DB 현재 상태 -->
+    <div class="db-status-bar" id="db-status-bar">
+      <span>⚪</span><span class="db-sinfo loading">GitHub에서 DB 불러오는 중…</span>
+    </div>
+
+    <!-- GitHub 토큰 설정 -->
+    <div id="token-section" style="margin-top:12px; padding-top:12px; border-top: 1px solid #f0f0f0;">
+      <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+        <span style="font-size:12px; font-weight:600; color:#888;">🔑 GitHub 토큰</span>
+        <span id="token-saved-badge" style="display:none; font-size:11px; background:#e8f5e9; color:#2e7d32; padding:1px 8px; border-radius:20px;">저장됨</span>
+        <button class="btn btn-sm" id="token-clear-btn" style="display:none; margin-left:auto; font-size:11px; padding:3px 8px; color:#e53935; border-color:#e53935;">토큰 삭제</button>
+      </div>
+      <div class="token-row" id="token-input-row">
+        <input type="password" id="token-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+        <button class="btn btn-sm" id="token-save-btn">저장</button>
+      </div>
+      <p class="token-hint">
+        업로드 시 필요합니다.
+        <a href="https://github.com/settings/tokens/new?scopes=repo&description=TONDA-DB-Sync" target="_blank">여기서 토큰 발급 →</a>
+        (repo 권한 체크 후 생성, 한 번만 입력하면 됩니다)
+      </p>
     </div>
   </div>
 
 </div>
 
 <script>
-// ── 라이브러리 확인 ────────────────────────────────────
-window.addEventListener('load', () => {
-  const el = document.getElementById('lib-status');
-  if (typeof XLSX !== 'undefined') {
-    el.textContent = '✔ 라이브러리 준비 완료';
-    el.className = 'lib-ok';
-  } else {
-    el.textContent = '✗ 라이브러리 로드 실패 — xlsx.bundle.js 파일 확인';
-    el.className = 'lib-fail';
-  }
-});
-
-function getXS() {
-  if (typeof XLSX !== 'undefined') return XLSX;
-  throw new Error('xlsx.bundle.js 파일이 index.html과 같은 폴더에 있는지 확인하세요.');
-}
-
-// ── 상태 ──────────────────────────────────────────────
-const state = {
-  dbRows: [], dbByTaxNo: {}, dbFileName: '',
-  inputRows: [], inputFileName: '',
-  outputData: [],
-};
+// ── 상수 ──────────────────────────────────────────────
+const REPO_OWNER = 'a90894048-creator';
+const REPO_NAME  = 'TONDA-EXCEL';
+const DB_FILE    = 'database.xlsx';
+const RAW_URL    = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${DB_FILE}`;
+const API_URL    = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${DB_FILE}`;
 
 const OUT_HEADERS = [
   '통관고유부호','비엘번호','해외거래처상호','세번부호','세율구분',
   '규격1','규격2','규격3','성분1','수량','단위','단가','금액','순중량','FILE 1'
 ];
 
-// ── 유틸 ──────────────────────────────────────────────
-function sheetToJson(wb) {
-  const XS = getXS();
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  return XS.utils.sheet_to_json(ws, { defval: '' });
-}
+// ── 상태 ──────────────────────────────────────────────
+const state = {
+  dbRows: [], dbByTaxNo: {}, dbFileName: '', dbLoaded: false,
+  inputRows: [], inputFileName: '',
+  outputData: [],
+};
 
-function readFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      try {
-        const XS = getXS();
-        resolve(XS.read(new Uint8Array(e.target.result), { type: 'array' }));
-      } catch(err) { reject(err); }
-    };
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(file);
-  });
-}
+// ── 라이브러리 확인 ──────────────────────────────────
+window.addEventListener('load', () => {
+  const el = document.getElementById('lib-status');
+  if (typeof XLSX !== 'undefined') {
+    el.textContent = '✔ 준비 완료';
+    el.className = 'lib-ok';
+  } else {
+    el.textContent = '✗ xlsx.bundle.js 없음';
+    el.className = 'lib-fail';
+  }
+});
 
-function updateRunBtn() {
-  document.getElementById('run-btn').disabled =
-    !(state.dbRows.length && state.inputRows.length);
-}
-
-function logLine(html) {
-  document.getElementById('log-box').innerHTML += html + '<br>';
+function getXS() {
+  if (typeof XLSX !== 'undefined') return XLSX;
+  throw new Error('xlsx.bundle.js 파일이 index.html과 같은 폴더에 있어야 합니다.');
 }
 
 // ── DB 인덱스 ──────────────────────────────────────────
@@ -271,6 +285,7 @@ function buildDbIndex(rows) {
     if (!state.dbByTaxNo[key]) state.dbByTaxNo[key] = [];
     state.dbByTaxNo[key].push(r);
   }
+  state.dbLoaded = true;
 }
 
 function findCustomsNo(taxNo) {
@@ -284,30 +299,190 @@ function findDbRow(taxNo, keyword) {
   return list.find(r => String(r['규격1'] ?? '').trim().toUpperCase() === kw) || null;
 }
 
-// ── 파일 로드 ──────────────────────────────────────────
-async function loadDB(file) {
-  try {
-    const wb = await readFile(file);
-    state.dbFileName = file.name;
-    buildDbIndex(sheetToJson(wb));
+function updateRunBtn() {
+  document.getElementById('run-btn').disabled = !(state.dbLoaded && state.inputRows.length);
+}
 
+// ── DB 상태 표시 ──────────────────────────────────────
+function setDbBar(type, name, info) {
+  const bar = document.getElementById('db-status-bar');
+  bar.className = 'db-status-bar ' + (type === 'ok' ? 'ok' : type === 'loading' ? 'loading' : 'error');
+  const icon = type === 'ok' ? '✅' : type === 'loading' ? '⏳' : '❌';
+  const infoCls = type === 'error' ? 'err' : type === 'loading' ? 'loading' : '';
+  bar.innerHTML = `<span>${icon}</span>` +
+    (name ? `<span class="db-sname">${name}</span>` : '') +
+    `<span class="db-sinfo ${infoCls}" style="flex:1">${info}</span>`;
+  const pill = document.getElementById('db-pill');
+  pill.textContent = type === 'ok' ? '✔ 동기화됨' : type === 'loading' ? '불러오는 중…' : '연결 오류';
+  pill.style.background = type === 'ok' ? '#e8f5e9' : type === 'loading' ? '#e8f0fe' : '#fce4ec';
+  pill.style.color = type === 'ok' ? '#2e7d32' : type === 'loading' ? '#1a6cf5' : '#c62828';
+}
+
+// ── GitHub에서 DB 자동 로드 ──────────────────────────
+async function loadDbFromGitHub() {
+  setDbBar('loading', '', 'GitHub에서 최신 DB 불러오는 중…');
+  try {
+    const res = await fetch(RAW_URL + '?t=' + Date.now());
+    if (!res.ok) {
+      if (res.status === 404) {
+        setDbBar('error', '', 'GitHub에 DB 파일이 없습니다. 아래에서 최초 업로드해주세요.');
+      } else {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      return;
+    }
+    const buf = await res.arrayBuffer();
+    const XS = getXS();
+    const wb = XS.read(new Uint8Array(buf), { type: 'array' });
+    const rows = XS.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+    buildDbIndex(rows);
+
+    // 파일명은 API로 가져오기 (commit 날짜 표시용)
+    let infoText = `${rows.length.toLocaleString()}행`;
     try {
-      const XS = getXS();
-      localStorage.setItem('db_file_name', file.name);
-      localStorage.setItem('db_file_data', XS.write(wb, { type: 'base64', bookType: 'xlsx' }));
+      const apiRes = await fetch(API_URL);
+      if (apiRes.ok) {
+        const meta = await apiRes.json();
+        if (meta.encoding && meta._links) {
+          // 커밋 날짜는 commits API에서 별도 확인 가능하지만 간단히 생략
+        }
+      }
     } catch(e) {}
 
-    const now = new Date().toLocaleDateString('ko-KR');
-    setDbStatus(true, file.name, `${state.dbRows.length.toLocaleString()}행 · ${now}`);
-  } catch(e) { alert('DB 파일 읽기 실패:\n' + e.message); }
-  updateRunBtn();
+    setDbBar('ok', DB_FILE, `${infoText} · GitHub 최신 버전`);
+    updateRunBtn();
+  } catch(e) {
+    setDbBar('error', '', `로드 실패: ${e.message}`);
+  }
+}
+
+// ── GitHub에 DB 업로드 ────────────────────────────────
+async function uploadDbToGitHub(file) {
+  const token = localStorage.getItem('gh_token');
+  if (!token) {
+    alert('GitHub 토큰이 필요합니다. 아래 토큰 입력란에 토큰을 저장해주세요.');
+    document.getElementById('token-input').focus();
+    return;
+  }
+
+  // 진행 표시
+  const prog = document.getElementById('upload-progress');
+  prog.style.display = 'flex';
+  document.getElementById('upload-msg').textContent = '파일 읽는 중…';
+
+  try {
+    // 파일을 base64로 변환
+    const buf = await file.arrayBuffer();
+    const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+
+    document.getElementById('upload-msg').textContent = '기존 파일 SHA 확인 중…';
+
+    // 기존 파일 SHA 가져오기 (업데이트 시 필요)
+    let sha = null;
+    try {
+      const getRes = await fetch(API_URL, {
+        headers: { 'Authorization': `token ${token}` }
+      });
+      if (getRes.ok) {
+        const meta = await getRes.json();
+        sha = meta.sha;
+      }
+    } catch(e) {}
+
+    document.getElementById('upload-msg').textContent = 'GitHub에 업로드 중…';
+
+    const now = new Date().toLocaleString('ko-KR');
+    const body = {
+      message: `DB 업데이트 (${now})`,
+      content: b64,
+    };
+    if (sha) body.sha = sha;
+
+    const putRes = await fetch(API_URL, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    prog.style.display = 'none';
+
+    if (!putRes.ok) {
+      const err = await putRes.json();
+      throw new Error(err.message || `HTTP ${putRes.status}`);
+    }
+
+    // 업로드 성공 → 로컬 DB도 갱신
+    const XS = getXS();
+    const wb = XS.read(new Uint8Array(buf), { type: 'array' });
+    const rows = XS.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+    buildDbIndex(rows);
+    setDbBar('ok', file.name, `${rows.length.toLocaleString()}행 · 방금 업로드됨 · 모든 사용자에게 공유됨 ✔`);
+    updateRunBtn();
+    document.getElementById('db-file-input').value = '';
+
+  } catch(e) {
+    prog.style.display = 'none';
+    alert('업로드 실패:\n' + e.message + '\n\n토큰이 올바른지 확인해주세요.');
+  }
+}
+
+// ── 토큰 관리 ──────────────────────────────────────────
+function initTokenUI() {
+  const token = localStorage.getItem('gh_token');
+  const inputRow   = document.getElementById('token-input-row');
+  const badge      = document.getElementById('token-saved-badge');
+  const clearBtn   = document.getElementById('token-clear-btn');
+  const hint       = document.querySelector('.token-hint');
+
+  if (token) {
+    inputRow.style.display = 'none';
+    badge.style.display = 'inline';
+    clearBtn.style.display = 'inline-flex';
+    hint.style.display = 'none';
+  } else {
+    inputRow.style.display = 'flex';
+    badge.style.display = 'none';
+    clearBtn.style.display = 'none';
+    hint.style.display = 'block';
+  }
+}
+
+document.getElementById('token-save-btn').addEventListener('click', () => {
+  const val = document.getElementById('token-input').value.trim();
+  if (!val) { alert('토큰을 입력해주세요.'); return; }
+  localStorage.setItem('gh_token', val);
+  document.getElementById('token-input').value = '';
+  initTokenUI();
+});
+
+document.getElementById('token-clear-btn').addEventListener('click', () => {
+  if (confirm('저장된 토큰을 삭제할까요?')) {
+    localStorage.removeItem('gh_token');
+    initTokenUI();
+  }
+});
+
+// ── 입력 파일 로드 ──────────────────────────────────────
+function readFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try { resolve(getXS().read(new Uint8Array(e.target.result), { type: 'array' })); }
+      catch(err) { reject(err); }
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
 }
 
 async function loadInput(file) {
   try {
     const wb = await readFile(file);
     state.inputFileName = file.name;
-    state.inputRows = sheetToJson(wb);
+    state.inputRows = getXS().utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
 
     const el = document.getElementById('input-status');
     el.className = 'file-status status-ok';
@@ -316,26 +491,6 @@ async function loadInput(file) {
       <button class="fs-remove">✕</button>`;
     el.querySelector('.fs-remove').addEventListener('click', clearInput);
   } catch(e) { alert('입력 파일 읽기 실패:\n' + e.message); }
-  updateRunBtn();
-}
-
-function setDbStatus(ok, name, info) {
-  const el = document.getElementById('db-status');
-  el.className = 'db-file-status' + (ok ? ' ok' : '');
-  el.innerHTML = ok
-    ? `<span>✅</span><span class="db-fs-name">${name}</span><span class="db-fs-info">${info}</span>
-       <button class="db-remove-btn" id="db-remove-btn-inner">✕</button>`
-    : `<span>⚪</span><span class="db-fs-info">DB 파일이 업로드되지 않았습니다</span>`;
-  if (ok) {
-    document.getElementById('db-remove-btn-inner').addEventListener('click', clearDB);
-  }
-}
-
-function clearDB() {
-  state.dbRows = []; state.dbByTaxNo = {}; state.dbFileName = '';
-  try { localStorage.removeItem('db_file_name'); localStorage.removeItem('db_file_data'); } catch(e) {}
-  setDbStatus(false);
-  document.getElementById('db-file-input').value = '';
   updateRunBtn();
 }
 
@@ -348,48 +503,34 @@ function clearInput() {
   updateRunBtn();
 }
 
-// ── 드롭존 ──────────────────────────────────────────
-function setupDrop(dropId, inputId, loader) {
+// ── 드롭존 설정 ──────────────────────────────────────
+function setupDrop(dropId, inputId, handler) {
   const drop = document.getElementById(dropId);
   const inp  = document.getElementById(inputId);
-  inp.addEventListener('change', e => { if (e.target.files[0]) loader(e.target.files[0]); });
+  inp.addEventListener('change', e => { if (e.target.files[0]) handler(e.target.files[0]); });
   drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag-over'); });
   drop.addEventListener('dragleave', () => drop.classList.remove('drag-over'));
   drop.addEventListener('drop', e => {
     e.preventDefault(); drop.classList.remove('drag-over');
-    if (e.dataTransfer.files[0]) loader(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files[0]) handler(e.dataTransfer.files[0]);
   });
 }
-setupDrop('input-drop', 'input-file-input', loadInput);
-setupDrop('db-drop',    'db-file-input',    loadDB);
 
-// localStorage 복원
-try {
-  const name = localStorage.getItem('db_file_name');
-  const data = localStorage.getItem('db_file_data');
-  if (name && data) {
-    const XS = getXS();
-    const wb = XS.read(data, { type: 'base64' });
-    state.dbFileName = name;
-    buildDbIndex(sheetToJson(wb));
-    setDbStatus(true, name, `${state.dbRows.length.toLocaleString()}행 · 이전 세션에서 복원`);
-    updateRunBtn();
-  }
-} catch(e) { console.warn('DB 복원 실패:', e); }
+setupDrop('input-drop', 'input-file-input', loadInput);
+setupDrop('db-drop',    'db-file-input',    uploadDbToGitHub);
 
 // ── 변환 실행 ──────────────────────────────────────────
-document.getElementById('run-btn').addEventListener('click', runConversion);
-
-function runConversion() {
+document.getElementById('run-btn').addEventListener('click', () => {
   const logBox = document.getElementById('log-box');
   logBox.innerHTML = '';
   ['log-label','log-box','stat-row','preview-label'].forEach(id => {
     document.getElementById(id).style.display = id === 'stat-row' ? 'grid' : 'block';
   });
 
+  const log = html => { logBox.innerHTML += html + '<br>'; };
   const input = state.inputRows;
-  logLine(`<span class="log-ok">✔ DB: ${state.dbFileName} (${state.dbRows.length}행 / ${Object.keys(state.dbByTaxNo).length}개 사업자)</span>`);
-  logLine(`<span class="log-ok">✔ 입력: ${state.inputFileName} (${input.length}행)</span>`);
+  log(`<span class="log-ok">✔ DB: ${state.dbFileName || DB_FILE} (${state.dbRows.length}행)</span>`);
+  log(`<span class="log-ok">✔ 입력: ${state.inputFileName} (${input.length}행)</span>`);
 
   const output = [];
   let cntSkip = 0, cntOk = 0, cntMissHs = 0, cntMissTax = 0;
@@ -408,25 +549,19 @@ function runConversion() {
     const inputHs  = String(row['세번'] ?? '').trim();
     const recipient= String(row['받는사람'] ?? '').trim();
 
-    // 개인통관(P) 제외
     if (taxNo.toUpperCase().startsWith('P')) {
       cntSkip++;
-      logLine(`<span class="log-skip">⊘ 개인통관 제외 — HAWB ${hawbNo} · ${recipient}</span>`);
+      log(`<span class="log-skip">⊘ 개인통관 제외 — HAWB ${hawbNo} · ${recipient}</span>`);
       continue;
     }
 
-    // 통관고유번호
     const customsNo = findCustomsNo(taxNo);
-    if (!customsNo) {
-      cntMissTax++;
-      logLine(`<span class="log-warn">⚠ 통관번호 미발견 — 사업자 ${taxNo} (${recipient})</span>`);
-    }
+    if (!customsNo) { cntMissTax++; log(`<span class="log-warn">⚠ 통관번호 미발견 — 사업자 ${taxNo} (${recipient})</span>`); }
 
-    // 세번부호: 브랜드 우선, 없으면 상품명
     const lookupKey = brand || prodName;
     const dbRow = findDbRow(taxNo, lookupKey);
-
     let hsCode, taxDiv, spec2, spec3, comp1, missHs = false;
+
     if (dbRow) {
       hsCode = String(dbRow['세번부호'] ?? '').trim();
       taxDiv = String(dbRow['세율구분'] ?? '').trim();
@@ -435,56 +570,36 @@ function runConversion() {
       comp1  = String(dbRow['성분1'] ?? '').trim();
       cntOk++;
     } else {
-      hsCode  = inputHs;
-      taxDiv  = '';
-      spec2   = '';
-      spec3   = '';
-      comp1   = '';
-      missHs  = true;
-      cntMissHs++;
-      logLine(`<span class="log-warn">⚠ 세번 미일치 — HAWB ${hawbNo} · ${recipient} · "${lookupKey}" → 인풋 세번 ${inputHs || '(없음)'} 사용</span>`);
+      hsCode = inputHs; taxDiv = ''; spec2 = ''; spec3 = ''; comp1 = '';
+      missHs = true; cntMissHs++;
+      log(`<span class="log-warn">⚠ 세번 미일치 — HAWB ${hawbNo} · ${recipient} · "${lookupKey}" → 인풋 세번 ${inputHs||'(없음)'} 사용</span>`);
     }
 
-    // 순중량: 동일 HAWB 첫 행에만
     const weightOut = hawbSeen[hawbNo] ? '' : weight;
     hawbSeen[hawbNo] = true;
 
     output.push({
-      vals: [
-        customsNo, hawbNo, shipper, hsCode, taxDiv,
-        prodName, spec2, spec3, comp1,
-        qty, 'PC', unitPrc, amount, weightOut, 'TONDA'
-      ],
-      missHs,
-      missTax: !customsNo,
-      fromDb: !!dbRow,
+      vals: [customsNo, hawbNo, shipper, hsCode, taxDiv, prodName, spec2, spec3, comp1, qty, 'PC', unitPrc, amount, weightOut, 'TONDA'],
+      missHs, missTax: !customsNo, fromDb: !!dbRow,
     });
   }
 
   state.outputData = output;
-
   document.getElementById('s-total').textContent = input.length;
   document.getElementById('s-skip').textContent  = cntSkip;
   document.getElementById('s-ok').textContent    = cntOk;
   document.getElementById('s-miss').textContent  = cntMissHs;
   document.getElementById('s-warn').textContent  = cntMissTax;
 
-  logLine(`<span class="log-ok">✔ 변환 완료 — 출력 ${output.length}행 (개인통관 ${cntSkip}건 제외)</span>`);
-  if (cntMissHs > 0) logLine(`<span class="log-warn">⚠ 세번 미일치 ${cntMissHs}건 → 다운로드 파일에서 노란색으로 표시됩니다</span>`);
+  log(`<span class="log-ok">✔ 변환 완료 — 출력 ${output.length}행 (개인통관 ${cntSkip}건 제외)</span>`);
+  if (cntMissHs > 0) log(`<span class="log-warn">⚠ 세번 미일치 ${cntMissHs}건 → 다운로드 파일에서 노란색 표시</span>`);
 
-  renderPreview(output);
-  document.getElementById('download-btn').disabled = false;
-}
-
-// ── 미리보기 ──────────────────────────────────────────
-function renderPreview(output) {
+  // 미리보기
   document.getElementById('empty-msg').style.display = 'none';
   const table = document.getElementById('preview-table');
   table.style.display = 'table';
-
   document.getElementById('preview-head').innerHTML =
     '<tr>' + OUT_HEADERS.map(h => `<th>${h}</th>`).join('') + '</tr>';
-
   document.getElementById('preview-body').innerHTML =
     output.slice(0, 20).map(r =>
       '<tr>' + r.vals.map((v, ci) => {
@@ -499,9 +614,11 @@ function renderPreview(output) {
   const note = document.getElementById('table-note');
   note.style.display = 'block';
   note.textContent = output.length > 20
-    ? `상위 20행 미리보기 (전체 ${output.length}행) — 노란색: 세번 미일치 / 주황색: 통관번호 미발견`
+    ? `상위 20행 미리보기 (전체 ${output.length}행)`
     : `전체 ${output.length}행`;
-}
+
+  document.getElementById('download-btn').disabled = false;
+});
 
 // ── 다운로드 ──────────────────────────────────────────
 document.getElementById('download-btn').addEventListener('click', () => {
@@ -509,65 +626,39 @@ document.getElementById('download-btn').addEventListener('click', () => {
   try {
     const XS = getXS();
     const output = state.outputData;
-
     const wsData = [OUT_HEADERS, ...output.map(r => r.vals)];
     const ws = XS.utils.aoa_to_sheet(wsData);
 
-    // 헤더 스타일
-    const hStyle = {
-      font: { bold: true, sz: 11 },
-      fill: { patternType: 'solid', fgColor: { rgb: 'D9E1F2' } },
-      alignment: { horizontal: 'center', vertical: 'center' },
-      border: {
-        bottom: { style: 'thin', color: { rgb: 'AAAAAA' } }
-      }
-    };
+    const hStyle = { font: { bold: true, sz: 11 }, fill: { patternType: 'solid', fgColor: { rgb: 'D9E1F2' } }, alignment: { horizontal: 'center' } };
     OUT_HEADERS.forEach((_, ci) => {
       const ref = XS.utils.encode_cell({ r: 0, c: ci });
-      if (!ws[ref]) return;
-      ws[ref].s = hStyle;
+      if (ws[ref]) ws[ref].s = hStyle;
     });
 
-    // 세번부호 미일치 → 노란 하이라이트
-    const yellowStyle = {
-      fill: { patternType: 'solid', fgColor: { rgb: 'FFFF00' } },
-      font: { color: { rgb: 'CC5200' }, bold: true }
-    };
-    // 통관번호 미발견 → 연한 주황
-    const orangeStyle = {
-      fill: { patternType: 'solid', fgColor: { rgb: 'FFE0B2' } }
-    };
-
+    const yellowStyle = { fill: { patternType: 'solid', fgColor: { rgb: 'FFFF00' } }, font: { color: { rgb: 'CC5200' }, bold: true } };
+    const orangeStyle = { fill: { patternType: 'solid', fgColor: { rgb: 'FFE0B2' } } };
     output.forEach((r, ri) => {
-      if (r.missHs) {
-        const ref = XS.utils.encode_cell({ r: ri + 1, c: 3 });
-        if (ws[ref]) ws[ref].s = yellowStyle;
-      }
-      if (r.missTax) {
-        const ref = XS.utils.encode_cell({ r: ri + 1, c: 0 });
-        if (ws[ref]) ws[ref].s = orangeStyle;
-      }
+      if (r.missHs) { const ref = XS.utils.encode_cell({ r: ri+1, c: 3 }); if (ws[ref]) ws[ref].s = yellowStyle; }
+      if (r.missTax) { const ref = XS.utils.encode_cell({ r: ri+1, c: 0 }); if (ws[ref]) ws[ref].s = orangeStyle; }
     });
 
-    // 열 너비
     ws['!cols'] = [
-      { wch: 18 }, { wch: 16 }, { wch: 22 }, { wch: 15 }, { wch: 10 },
-      { wch: 32 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 8  },
-      { wch: 6  }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }
+      {wch:18},{wch:16},{wch:22},{wch:15},{wch:10},
+      {wch:32},{wch:22},{wch:22},{wch:22},{wch:8},
+      {wch:6},{wch:10},{wch:10},{wch:10},{wch:10}
     ];
-
-    // 행 높이 (헤더)
     ws['!rows'] = [{ hpt: 20 }];
 
     const wb = XS.utils.book_new();
     XS.utils.book_append_sheet(wb, ws, '업로드 값');
-
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
     XS.writeFile(wb, `TONDA_변환결과_${today}.xlsx`);
-  } catch(e) {
-    alert('다운로드 실패:\n' + e.message);
-  }
+  } catch(e) { alert('다운로드 실패:\n' + e.message); }
 });
+
+// ── 초기화 ────────────────────────────────────────────
+initTokenUI();
+loadDbFromGitHub();
 </script>
 </body>
 </html>
